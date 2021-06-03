@@ -1,0 +1,57 @@
+---
+title: "Exponential Distribution in R"
+author: "Utkarsh Chauhan"
+date: "8/27/2020"
+output: pdf_document
+---
+
+## Overview
+In this report we will investigate the exponential distribution in R and compare it with the Central Limit Theorem. The exponential distribution can be simulated in R with `rexp(n, lambda)` where *lambda* is the *rate parameter*. The mean of exponential distribution is *1/lambda* and the standard deviation is also *1/lambda*.
+
+## Simulation
+```{r message=FALSE, warning=FALSE}
+set.seed(3339)
+
+lambda <- 0.2
+n <- 40
+B <- 10000
+
+samples <- matrix(rexp(B*n, lambda),B, n)
+
+hist(samples, main = 'Histogrm of sample distribution')
+```  
+Here we have created exponential distribution of `r B*n` values arranged in a matrix of dimensions `r dim(samples)`
+```{r message=FALSE, warning=FALSE}
+sampledAvg <- apply(samples, 1, mean)
+hist(sampledAvg, main = 'Histogram of averages of sample distribution')
+```
+
+## Sample Mean vs Theoretical Mean
+```{r}
+mu <- mean(sampledAvg)  # our sample data mean
+mu0 <- 1/lambda  # theoretical mean
+```
+Mean of our sample data = `r mu`  
+Theoretical mean = `r mu0`  
+Hence it can be seen that our sample data mean and theoretical mean are very close.
+
+## Sample Variance vs Theoretical Variance
+```{r}
+sigma <- var(sampledAvg)  # our sample data variance
+sigma0 <- (1/lambda^2)/n  # theoretical variance
+```
+Variance of our sample data = `r sigma`  
+Theoretical variance = `r sigma0`  
+Hence it can be seen that our sample data variance is pretty close to theoretical variance.
+
+## Distribution
+```{r}
+hist(sampledAvg,breaks = 100, freq = FALSE, main = 'Density of averages')
+x <- seq(from=1,to=9,length.out = 100)
+y <- dnorm(x, mean = 1/lambda, sd = (1/lambda)/sqrt(n))
+lines(x,y,type='l',lty=5,lwd=2.4,col='red')
+```
+Here the histogram of averages of sample distribution is plotted against its density and the red dotted line shows normal distribution with same mean and standard deviation.  
+Hence it can be seen that the distribution is approximately normal.
+
+

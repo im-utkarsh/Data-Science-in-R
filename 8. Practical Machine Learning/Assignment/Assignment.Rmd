@@ -1,0 +1,133 @@
+---
+title: 'Practical Machine Learning : Prediction'
+author: "Utkarsh Chauhan"
+date: "9/4/2020"
+output: html_document
+---
+
+## Introduction
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har .
+
+## Package Required and Data Loading
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+```{r message=FALSE, warning=FALSE}
+library(caret)
+library(randomForest)
+
+# Set seed for reproducibility
+set.seed(3339)
+
+## Data for training and cross-validation
+if ( !file.exists("pml-training.csv") ) {
+    download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',
+                  'pml-training.csv')
+}
+
+## Data for testing
+if ( !file.exists("pml-testing.csv") ) {
+    download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',
+                  'pml-testing.csv')
+}
+
+## Loading data
+data <- read.csv('pml-training.csv')
+test <- read.csv('pml-testing.csv')
+```
+
+## Data Processing  
+
+* Remove variables which are having NA values (threshold 95%).
+* Remove variables which are having nearly zero variance
+* Remove variables which are not required such as *user_name*, *raw_timestamp_part_1*, *raw_timestamp_part_2*, *cvtd_timestamp*, and *num_window* (columns 1 to 6).
+```{r}
+## Removing columns with more than 95% missing values
+missing <- which(apply(data, 2, function(col) mean(is.na(col)))>.95)
+data <- subset(data,select = -missing)
+test <- subset(test,select = -missing)
+
+## Removing columns having near zero variance
+near_zero <- nearZeroVar(data)
+data <- subset(data,select = -near_zero)
+test <- subset(test,select = -near_zero)
+
+## Removing first 6 columns
+data <- subset(data,select = -c(1:6))
+test <- subset(test,select = -c(1:6))
+
+## Convert classes into factor variable
+data$classe <- as.factor(data$classe)
+```  
+  
+* partition the training data into training set and cross validation set using *classe* variable.
+```{r}
+inTrain <- createDataPartition(y=data$classe,p=0.75, list=FALSE)
+
+train <- data[inTrain,]
+cv <- data[-inTrain,]
+```
+
+## Fitting Gradient Boosting Model
+First we will fit a gradient boosting model and check its accuracy
+```{r}
+fit_boost <- train(classe~., data=train, method="gbm", verbose= FALSE)
+conf_train_boost <- confusionMatrix(predict(fit_boost, train),train$classe)
+conf_train_boost
+```
+Gradient boosting model has a training accuracy of `r conf_train_boost$overall['Accuracy'] * 100`%.  
+
+Graph showing how accuracy increases by iterations per tree :
+```{r}
+plot(fit_boost)
+```
+
+Lets predict on cross-validation set and check its accuracy.
+```{r}
+pred_cv_boost <- predict(fit_boost, cv)
+conf_cv_boost<-confusionMatrix(pred_cv_boost,cv$classe)
+conf_cv_boost
+```
+Gradient boosting model has a great cross-validation accuracy of `r conf_cv_boost$overall['Accuracy'] * 100`%.
+
+## Fitting Random Forest Model
+Now we will fit a random forest model and check its accuracy.
+```{r}
+fit_rf <- randomForest(classe ~ ., data=train)
+
+conf_train_rf <- confusionMatrix(fit_rf$predicted,train$classe)
+conf_train_rf
+```
+Here we can see that our random forest model has a training accuracy of `r conf_train_rf$overall['Accuracy'] * 100`%.  
+
+Graph showing how error decrease by tree :
+```{r}
+plot(fit_rf)
+```
+
+Lets predict on cross-validation set and check its accuracy.
+```{r}
+pred_cv_rf <- predict(fit_rf, cv)
+conf_cv_rf<-confusionMatrix(pred_cv_rf,cv$classe)
+conf_cv_rf
+```
+Here also, random forest model has a near perfect accuracy of `r conf_cv_rf$overall['Accuracy'] * 100`%.
+
+## Conclusion
+We conclude that, Random Forest is predicting more accurate than Gradient Boosting Model with up-to 99% of accuracy level.
+
+## Prediction (using Random Forest) on test data
+```{r}
+predict(fit_rf, test)
+```
+
+
+
+
+
+

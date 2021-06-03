@@ -1,0 +1,83 @@
+---
+title: "Regression Models Course Project"
+author: "Utkarsh Chauhan"
+date: "9/1/2020"
+output: pdf_document
+---
+
+## Executive Summary  
+When looking at the mtcars data set, we attempted to predict Miles per Gallon using different methods. Initially, regular inference testing indicated that the null hypothesis should be rejected proving manual transmissions did indeed have a significant positive impact on MPG. Next, we see average how many more miles per gallon a manual transmission car gets. The linear regression analysis estimated around a 7.24 miles per gallon increase.
+
+It is also necessary to test how other variables effect MPG along with transmission. So, we tested a model with all the other variables and see difference between the two fitted models, and looked how the predictability increased.
+
+## Loading and Processing Data
+```{r message=FALSE, warning=FALSE}
+data("mtcars")
+
+str(mtcars)
+# converting categorical variables into factors
+mtcars$cyl <- as.factor(mtcars$cyl)
+mtcars$vs <- as.factor(mtcars$vs)
+mtcars$am <- as.factor(mtcars$am)
+mtcars$gear <- as.factor(mtcars$gear)
+mtcars$carb <- as.factor(mtcars$carb)
+```  
+
+## Exploratory Analysis
+```{r fig.height=4}
+par(mfrow=c(1,2))
+hist(mtcars$mpg,breaks = 15, col='pink2', main = 'Distribution of mpg', xlab = 'mpg')
+plot(mtcars$am,mtcars$mpg,col=c('lightsteelblue2','aquamarine3'),
+     xlab='Transmission',ylab='mpg',names=c('auto','manual'), main='mpg by Transmission')
+```
+
+## Regression Models
+Let’s begin with a simple linear regression of MPG vs automatic/manual transmissions.
+```{r}
+fit <- lm(mpg~am,data = mtcars)
+summary(fit)
+confint(fit)
+```  
+* Intercept = 17.15 and Slope = 7.24  
+Implies with an *Automatic Transmission*, MPG avg starts at 17.15 and if the car had a *Manual Transmission*, you could estimate an increase in MPG of 7.24.
+* Adjusted R square = 33.9%  
+implies this much variation can be explained by this model.
+* P-value = 0.0002  
+implies this model is significant.
+* confidence interval excludes zero.
+```{r fig.height=3.6, fig.width=5}
+plot(as.numeric(mtcars$am)-1,mtcars$mpg,xlab='Transmission',ylab='mpg',
+     col=rgb(0,.6,.6,.6), bg=rgb(0,.6,.6,.3),cex=1.8, pch=21)
+abline(fit, lwd=2, col='red')
+```
+
+Hence, we see there is a significant relationship between MPG and Transmission.
+
+Now lets fit multivariable regression with all the variables.
+```{r}
+fitall <- lm(mpg~.,data = mtcars)
+summary(fitall)
+```
+* MPG avg starts at 23.88 with *Automatic Transmission* and if the car had a *Manual Transmission*, you could estimate an increase in MPG of 1.21.
+* Adjusted R square = 80%
+implies this much variation can be explained by this model.
+* P-values shows large values implying non-significant result.  
+```{r}
+anova(fit,fitall)
+```
+* P-value = 0.0017
+implies second model is better than the first.
+
+This shows not all of the of the remaining variables are significant and model should be fitted again with only the important ones.
+
+```{r fig.height=3.6, fig.width=3.6}
+plot(fitall)
+```
+
+## Conclusion
+From the above analysis, we can say that the manual transmission is better than automatic transmission for MPG. The factors which influence MPG can be multiple. By using all possible regression method, we can pick up the relatively right variables into our model.
+
+
+
+
+

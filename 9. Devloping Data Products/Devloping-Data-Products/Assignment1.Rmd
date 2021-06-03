@@ -1,0 +1,32 @@
+---
+title: "Leaflet Map"
+author: "Utkarsh Chauhan"
+date: "9/5/2020"
+output: html_document
+---
+```{r, echo=FALSE}
+library(leaflet)
+
+df <- data.frame(lat = runif(1000, min = 31, max = 32),
+              lng = runif(1000, min = 75, max = 76))
+
+leafIcons <- icons(
+  iconUrl = ifelse(round((df$lat+df$lng)*1000) %% 2 == 0,
+    "http://leafletjs.com/examples/custom-icons/leaf-green.png",
+    ifelse(round((df$lat+df$lng)*1000) %% 3 == 0,
+           "http://leafletjs.com/examples/custom-icons/leaf-red.png",
+           "https://leafletjs.com/examples/custom-icons/leaf-orange.png")
+  ),
+  iconWidth = 38, iconHeight = 95,
+  iconAnchorX = 22, iconAnchorY = 94,
+  shadowUrl = "http://leafletjs.com/examples/custom-icons/leaf-shadow.png",
+  shadowWidth = 50, shadowHeight = 64,
+  shadowAnchorX = 4, shadowAnchorY = 62
+)
+
+df %>% 
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers(icon = leafIcons)
+```
+

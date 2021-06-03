@@ -1,0 +1,48 @@
+---
+title: "Week 3 Assignment"
+author: "Utkarsh Chauhan"
+date: "9/6/2020"
+output: ioslides_presentation
+---
+
+***
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(plotly)
+
+d1 <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/coffee-flavors.csv')
+d2 <- read.csv('https://raw.githubusercontent.com/plotly/datasets/718417069ead87650b90472464c7565dc8c2cb1c/sunburst-coffee-flavors-complete.csv')
+fig <- plot_ly() 
+fig <- fig %>%
+  add_trace(
+    ids = d1$ids,
+    labels = d1$labels,
+    parents = d1$parents,
+    type = 'sunburst',
+    maxdepth = 2,
+    domain = list(column = 0)
+    ) 
+fig <- fig %>%
+  add_trace(
+    ids = d2$ids,
+    labels = d2$labels,
+    parents = d2$parents,
+    type = 'sunburst',
+    maxdepth = 3,
+    domain = list(column = 1)
+  ) 
+fig <- fig %>%
+    layout(
+      grid = list(columns =2, rows = 1),
+      margin = list(l = 0, r = 0, b = 0, t = 0),
+      sunburstcolorway = c(
+        "#636efa","#EF553B","#00cc96","#ab63fa","#19d3f3",
+        "#e763fa", "#FECB52","#FFA15A","#FF6692","#B6E880"
+      ),
+      extendsunburstcolors = TRUE)
+fig
+
+```
+
+# Thank You
+

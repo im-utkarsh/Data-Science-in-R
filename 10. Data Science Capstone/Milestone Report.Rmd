@@ -1,0 +1,155 @@
+---
+title: "Data Science Capstone: Milestone Report"
+author: "Utkarsh Chauhan"
+date: "9/21/2020"
+output: html_document
+---
+
+## Introduction
+
+This is the Milestone Report for the Coursera Data Science Capstone project. The goal of the capstone project is to create a predictive text model using a large text corpus of documents as training data. Natural language processing techniques will be used to perform the analysis and build the predictive model.  
+This milestone report describes the major features of the training data with our exploratory data analysis and summarizes our plans for creating the predictive model.
+
+## Loading Data
+
+Libraries needed :
+```{r message=FALSE, warning=FALSE}
+library(NLP)
+library(tm)
+library(RWeka)
+library(readr)
+library(ggplot2)
+```
+Downloading and loading data :
+```{r}
+if ( !file.exists("Coursera-SwiftKey.zip") ) {
+    download.file('https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip',
+                  'Coursera-SwiftKey.zip')
+}
+
+unzip('Coursera-SwiftKey.zip', list = TRUE)
+```
+This is the list of files we got from our data.
+The data sets consist of text from 3 different sources:  
+1. News  
+2. Blogs  
+3. Twitter  
+The text data are provided in 4 different languages:   
+1) German, 2) English - United States, 3) Finnish and 4) Russian.  
+In this report, we will only focus on the English - United States data sets.
+
+```{r}
+blogs <- read_lines("final/en_US/en_US.blogs.txt", skip_empty_rows = TRUE)
+news <- read_lines("final/en_US/en_US.news.txt", skip_empty_rows = TRUE)
+twitter <- read_lines("final/en_US/en_US.twitter.txt", skip_empty_rows = TRUE)
+```
+Words for profanity filtering are taken from [Luis von Ahn's](https://www.cs.cmu.edu/~biglou) Research Group.
+```{r}
+if (!file.exists('bad-words.txt')) {
+    download.file('https://www.cs.cmu.edu/~biglou/resources/bad-words.txt','bad-words.txt')
+}
+badwords <- read_lines('bad-words.txt',skip_empty_rows = TRUE)
+```
+```{r,echo=FALSE}
+detach("package:readr", unload = TRUE)
+```
+
+Lets examine our data :
+```{r}
+sb <- file.size("final/en_US/en_US.blogs.txt")
+sn <- file.size("final/en_US/en_US.news.txt")
+st <- file.size("final/en_US/en_US.twitter.txt")
+
+data.frame(source = c("blogs", "news", "twitter"),
+           size.MB = c(sb/1024, sn/1024, st/1024),
+           num.lines = c(NROW(blogs),NROW(news),NROW(twitter)),
+           num.char = c(sum(nchar(blogs)),sum(nchar(news)),sum(nchar(twitter))))
+```
+## Cleaning and Sampling
+
+Since our raw data is huge, we will use a sample of it for analysis :
+```{r}
+set.seed(3339)
+
+blogs <- blogs[sample(length(blogs),25000)]
+news <- news[sample(length(news),25000)]
+twitter <- twitter[sample(length(twitter),25000)]
+```
+
+Cleaning involves removing URLs, special characters, punctuations, numbers, excess white space, stop words, and changing the text to lower case.
+```{r}
+corp <- VCorpus(VectorSource(c(blogs,news,twitter)))
+remove(blogs,news,twitter)      ## removing lists as we dont need them now
+corp <- tm_map(corp, content_transformer(tolower))
+## for removing pattern of choice
+rem <- content_transformer(function(x, pattern) gsub(pattern, " ", x))
+corp <- tm_map(corp, rem, "(f|ht)tp(s?)://(.*)[.][a-z]+")
+corp <- tm_map(corp, rem, "@[^\\s]+")
+corp <- tm_map(corp, removeNumbers)
+corp <- tm_map(corp,removePunctuation)
+corp <- tm_map(corp,removeWords, badwords)
+corp <- tm_map(corp,removeWords, stopwords())
+corp <- tm_map(corp, stripWhitespace)
+```
+## N-Gram Tokenization
+
+Lets create unigram, bigram, and trigram tokenizers.
+```{r}
+BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+
+TDM1 <- TermDocumentMatrix(corp, control = list(stemming=TRUE)) ## will create a unigram.
+TDM2 <- TermDocumentMatrix(corp, control = list(tokenize = BigramTokenizer, stemming=TRUE))
+TDM3 <- TermDocumentMatrix(corp, control = list(tokenize = TrigramTokenizer, stemming=TRUE))
+
+inspect(TDM1)
+inspect(TDM2)
+inspect(TDM3)
+```
+## Exploratory Data Analysis
+
+It be interesting and helpful to find the most frequently occurring words in the data.
+```{r}
+f1 <- findFreqTerms(TDM1,lowfreq =2500)
+f2 <- findFreqTerms(TDM2, lowfreq = 100)
+f3 <- findFreqTerms(TDM3, lowfreq = 10)
+Unigramfreq <- sort(rowSums(as.matrix(TDM1[f1,])),decreasing = TRUE)
+Unigramfreq <- data.frame(word=names(Unigramfreq),frequency=Unigramfreq)
+Bigramfreq <- sort(rowSums(as.matrix(TDM2[f2,])),decreasing = TRUE)
+Bigramfreq <- data.frame(word=names(Bigramfreq),frequency=Bigramfreq)
+Trigramfreq <- sort(rowSums(as.matrix(TDM3[f3,])),decreasing = TRUE)
+Trigramfreq <- data.frame(word=names(Trigramfreq),frequency=Trigramfreq)
+```
+Here are the most common unigrams, bigrams, and trigrams.
+```{r}
+g <- ggplot(Unigramfreq[1:27,], aes(x = factor(word,levels = Unigramfreq$word[1:27],
+                                               ordered=TRUE), y = frequency)) + 
+    geom_bar(stat = "identity", fill='aquamarine3')
+g + ggtitle("Most common Unigrams") + xlab("Unigrams") + ylab("Frequency") +
+    geom_text(stat="count", y=30, hjust=0, size = 5.4, angle = 90,color='white',
+              label=Unigramfreq[1:27,]$word) + 
+    theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+```
+```{r}
+g <- ggplot(Bigramfreq[1:27,], aes(x = factor(word,levels = Bigramfreq$word[1:27],
+                                               ordered=TRUE), y = frequency)) + 
+    geom_bar(stat = "identity", fill='aquamarine3')
+g + ggtitle("Most common Bigrams") + xlab("Bigrams") + ylab("Frequency") +
+    geom_text(stat="count", y=0.9, hjust=0, size = 4.2, angle = 90,color='white',
+              label=Bigramfreq[1:27,]$word) + 
+    theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+```
+```{r}
+g <- ggplot(Trigramfreq[1:27,], aes(x = factor(word,levels = Trigramfreq$word[1:27],
+                                               ordered=TRUE), y = frequency)) + 
+    geom_bar(stat = "identity", fill='aquamarine3')
+g + ggtitle("Most common Trigrams") + xlab("Trigrams") + ylab("Frequency") +
+    geom_text(stat="count", y=0.3, hjust=0, size = 3.6, angle = 90,color='black',
+              label=Trigramfreq[1:27,]$word) + 
+    theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+```   
+
+## Next Step
+
+Our predictive algorithm will be using n-gram model with frequency similar to our exploratory analysis above. One possible strategy would be to use the trigram model to predict the next word. If no match is found, then the algorithm would back off to the bigram model, and then to the unigram model if needed.  
+For the Shiny app, the plan is to create an app with a simple interface where the user can enter a string of text. Our prediction model will then give a list of suggested words for the next word.

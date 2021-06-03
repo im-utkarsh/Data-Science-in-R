@@ -1,0 +1,75 @@
+---
+title: "Infrential Data Analysis"
+author: "Utkarsh Chauhan"
+date: "8/28/2020"
+output: pdf_document
+---
+
+## Overview
+In this analysis, we will analyze the ToothGrowth data set by comparing tooth length by supplement and dose. We will compare confidence intervals in order to make conclusions about the tooth growth.
+
+## Loading and Exploring Data
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+data(ToothGrowth)
+head(ToothGrowth)
+str(ToothGrowth)
+summary(ToothGrowth)
+
+g <- ggplot(data = ToothGrowth, aes(x=factor(dose),y=len))
+label <- c("Orange Juice", "Vitamin C")
+names(label) <- c("OJ", "VC")
+g + geom_boxplot(aes(fill=supp),show.legend=FALSE) + 
+    facet_grid(.~supp, labeller = labeller(supp=label)) + 
+    labs(title = 'Tooth length by dose', x='Dose (mg/day)', y='Tooth length')
+```  
+It can be seen that as dose increases, tooth growth also increases for each supplement. Also, orange juice seems to provide better results for less quantity of dose.
+
+## Hypothesis Testing
+Lets look at tooth growth by supplement.
+
+H0: Tooth growth not correlated with supplements  
+Ha: Tooth growth correlated with supplements
+```{r message=FALSE, warning=FALSE}
+t.test(len~supp, data = ToothGrowth)
+```
+Here the confidence interval includes 0 and the p-value is greater than threshold of 0.05 (alpha). Therefore the null hypothesis can not be rejected.
+
+Now we will compare growth for each dose.
+
+* For does=0.5
+```{r}
+dose1 <- subset(ToothGrowth,dose==.5)
+t.test(len~supp, data = dose1)
+```
+The confidence interval does not contain 0 and p-value is much below 0.05 showing orange juice *provides better growth* than vitamin-C with a dose of 0.5 mg/day.
+
+* For does=1
+```{r}
+dose2 <- subset(ToothGrowth,dose==1)
+t.test(len~supp, data = dose2)
+```
+The confidence interval does not contain 0 and p-value is below 0.05 showing orange juice *provides better growth* than vitamin-C with 1 mg/day dose.
+
+* For does=2
+```{r}
+dose3 <- subset(ToothGrowth,dose==2)
+t.test(len~supp, data = dose3)
+```
+The confidence interval contains 0 and p-value is above 0.05 showing orange juice and vitamin-C *provide same growth* at dose of 2 mg/day.
+
+## Conclusion and Assumptions
+We can see that Orange juice shows more growth than Vitamin-C for small doses(0.5 and 1 mg/day) whereas there is no such trend for higher dose(2 mg/day). Overall we conclude that tooth growth depends strongly on dose but not on supplement.
+
+*Assumptions* :
+
+* sample is a good approximation of the population.  
+* distribution of the means is normal and follows CLT.  
+* no other unmeasured factors affect tooth growth.  
+
+
+
+
+
+
+

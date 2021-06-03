@@ -1,0 +1,164 @@
+---
+title: "Impact of Weather Events on Health and Economy in U.S."
+author: "Utkarsh Chauhan"
+date: "8/15/2020"
+output: html_document
+---
+
+## Synopsis
+
+Severe weather events can cause both public health as well a economic problems in communities.
+In this report, we explore the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database from 1950 - 2011. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+Using this, we will try to answer which types of events are most harmful with respect to population health and economy.           
+The analysis of the data shows that *Tornados* are most harmful with respect to *Population Health*, while *Floods* have the worst *Economic Impact*.
+
+## Setting R Environment, Data Download
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+```
+Data is downloaded if it doesn't exist in current directory.
+```{r}
+if ( !file.exists("repdata_data_StormData.csv.bz2") ) {
+    download.file('https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2', 'repdata_data_StormData.csv.bz2')
+}
+```
+
+## Loadinf and Examining Data
+Loading the data in R environment :
+```{r cache=TRUE}
+# It may take some time.
+data <- read.csv('repdata_data_StormData.csv.bz2')
+```
+Inspecting the structure of Data :
+```{r}
+dim <- dim(data)
+summary(data)
+```
+Here we can see that the dimension of data is `r dim`.
+
+## Data Processing
+First of all BGN_DATE is converted to date object and white space is trimmed from EVTYPE.
+```{r cache=TRUE}
+data <- mutate(data, BGN_DATE = as.Date(BGN_DATE,'%m/%d/%Y', tz = TIME_ZONE),
+               EVTYPE = trimws(EVTYPE))
+```
+Now lets plot a histogram of frequency of these events per year.
+```{r}
+hist(as.numeric(format(data$BGN_DATE,'%Y')),breaks=61, main = 'Disasters per Year',
+     xlab = 'Years', col='#e0e0e0')
+abline(v=1995,lwd=3,col='#62acb5')
+```
+
+Based on the above histogram, we see that the number of events tracked starts to significantly increase around *1995* (blue line). This is because in the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. Hence, more recent years should be considered more complete. So, we use the subset of the data from 1995 to 2011 to get most out of good records.
+```{r cache=TRUE}
+data <- select(data, BGN_DATE, EVTYPE, PROPDMG, PROPDMGEXP, CROPDMG,
+               CROPDMGEXP, FATALITIES, INJURIES) %>%
+    filter(format(BGN_DATE,'%Y') > 1995) %>%
+    filter(FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
+```
+For our analysis, columns of interest are:
+
+* BGN_DATE: starting date of event
+* EVTYPE: weather event (Tornados, Wind, Snow, Flood, etc..)
+* PROPDMG: approx. property damages
+* PROPDMGEXP: the units for property damage value
+* CROPDMG: approx. crop damages
+* CROPDMGEXP: the units for crop damage value
+* FATALITIES: approx. number of deaths
+* INJURIES: approx. number of injuries
+
+Checking for missing values:
+```{r}
+sum(!complete.cases(data))
+```
+This means none of the values in our data set are missing.
+
+Now, we will convert `PROPDMGEXP` and `CROPDMGEXP` into their exponential form.
+```{r}
+table(data$PROPDMGEXP)
+```
+```{r}
+table(data$CROPDMGEXP)
+```
+These symbols represent the following:
+
+* K: thousand dollars (10^3)
+* M: million dollars (10^6)
+* B: billion dollars (10^9)
+```{r, cache=TRUE}
+data$PROPDMGEXP[(data$PROPDMGEXP == '')] <- 1
+data$PROPDMGEXP[(data$PROPDMGEXP == 'K')] <- 10^3
+data$PROPDMGEXP[(data$PROPDMGEXP == 'M')] <- 10^6
+data$PROPDMGEXP[data$PROPDMGEXP == 'B'] <- 10^9
+data$PROPDMGEXP <- as.numeric(data$PROPDMGEXP)
+
+data$CROPDMGEXP[(data$CROPDMGEXP == '')] <- 1
+data$CROPDMGEXP[(data$CROPDMGEXP == 'K')] <- 10^3
+data$CROPDMGEXP[(data$CROPDMGEXP == 'M')] <- 10^6
+data$CROPDMGEXP[(data$CROPDMGEXP == 'B')] <- 10^9
+data$CROPDMGEXP <- as.numeric(data$CROPDMGEXP)
+```
+This is our clean dataset.
+```{r}
+head(data)
+```
+```{r}
+tail(data)
+```
+```{r}
+str(data)
+```
+
+## Results
+### Weather events most harmful with respect to population health
+```{r message=FALSE, cache=TRUE}
+health <- group_by(data,EVTYPE) %>% 
+  summarise(FATALITIES = sum(FATALITIES, na.rm = TRUE), 
+            INJURIES = sum(INJURIES, na.rm = TRUE)) %>%
+  filter(FATALITIES > 0 | INJURIES > 0) %>% 
+  arrange(desc(FATALITIES+INJURIES))
+```
+A subset of data is made by grouping it by `EVTYPE` and summarizing `FATALITIES` and `INJURIES` by sum. After that, the data is filtered to contain columns that are required for health impact analysis and then arranged in descending order by `FATALITIES` and `INJURIES`.
+```{r, cache=TRUE}
+h <- rbind(select(health[1:27,],EVTYPE,FATALITIES) %>% rename(HEALTH = FATALITIES) %>%
+           mutate(TYPE='Fatalities'),
+         select(health[1:27,],EVTYPE,INJURIES) %>% rename(HEALTH = INJURIES) %>%
+           mutate(TYPE='Injuries'))
+
+g <- ggplot(h, aes(x = factor(EVTYPE,levels = health$EVTYPE[1:27],ordered=TRUE),
+                   y = log(HEALTH), fill = TYPE)) + geom_bar(stat = "identity")
+g + geom_text(stat="count", y=0.9, hjust=0, angle = 90,col='white',
+              label=c(rbind(h[1:27,]$EVTYPE,rep('',27)))) +
+  theme(axis.text.x=element_blank(),axis.ticks.x=element_blank()) + labs(x='Weather Event') + ggtitle("Impact of different weather events on Public Health")
+```
+
+#### This plot shows most *fatality* and *injury* causing Weather Events.
+
+### Weather events worst impactful with respect to economy
+```{r message=FALSE, cache=TRUE}
+economy <- group_by(data,EVTYPE) %>% 
+  summarise(PROPDMG = sum(PROPDMG*PROPDMGEXP, na.rm = TRUE), 
+            CROPDMG = sum(CROPDMG*CROPDMGEXP, na.rm = TRUE)) %>%
+  filter(PROPDMG > 0 | CROPDMG > 0) %>%
+  arrange(desc(PROPDMG+CROPDMG))
+```
+This time, a subset of data is made by grouping it by `EVTYPE` and summarizing `PROPDMG` and `CROPDMG` by sum after multiplying them with their respective *EXP*. Subsequently, the data is filtered to contain columns that are required for health impact analysis and then arranged in descending order by `PROPDMG` and `CROPDMG`.
+```{r, cache=TRUE}
+e<-rbind(select(economy[1:27,],EVTYPE,PROPDMG) %>% rename(DAMAGE = PROPDMG) %>%
+           mutate(TYPE='Property Damage'),
+         select(economy[1:27,],EVTYPE,CROPDMG) %>% rename(DAMAGE = CROPDMG) %>%
+           mutate(TYPE='Crop Damage'))
+
+g <- ggplot(e, aes(x = factor(EVTYPE,levels = economy$EVTYPE[1:27],ordered=TRUE),
+                     y = log(DAMAGE), fill = TYPE)) + geom_bar(stat = "identity")
+g + geom_text(stat="count", y=0.9, hjust=0, angle = 90,col='white',
+              label=c(rbind(e[1:27,]$EVTYPE,rep('',27)))) +
+  theme(axis.text.x=element_blank(),axis.ticks.x=element_blank()) + labs(x='Weather Event') + ggtitle("Impact of different weather events on Economy")
+```
+
+#### This plot shows top Weather Events causing *economical damage*.
+
+## Conclusion
+From this data analysis, we found that **Tornados** are most harmful with respect to *population health*, while **Floods** have the worst *economic consequences*.

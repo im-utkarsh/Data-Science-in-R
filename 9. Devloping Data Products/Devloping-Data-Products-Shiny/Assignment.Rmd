@@ -1,0 +1,94 @@
+---
+title: "Devloping Data Products"
+author: "Utkarsh Chauhan"
+date: "9/7/2020"
+output: ioslides_presentation
+---
+
+## Objectives of Assignment
+
+This is a task for the data science coursera course about developing data products for week 4. As part of this, I have created a shiny app and deployed it on the shiny server. The link for raw code is https://github.com/im-utkarsh/Devloping-Data-Products-Shiny/tree/master/Devloping-Data-Product.  
+
+The app can be found at https://im-utkarsh.shinyapps.io/devloping-data-product/.
+
+## Data
+
+The data used is the *states* data which is available in R by default.
+
+Note : Only `state.x77` data is used in this assignment. 
+
+Matrix with 50 rows and 8 columns give the following statistics in the respective columns :
+
+- Population: population estimate as of July 1, 1975
+
+- Income: per capita income (1974)
+
+- Illiteracy: illiteracy (1970, percent of population)
+
+- Life Exp: life expectancy in years (1969–71)
+
+***
+
+- Murder: murder and non-negligent manslaughter rate per 100,000 population (1976)
+
+- HS Grad: percent high-school graduates (1970)
+
+- Frost: mean number of days with minimum temperature below freezing (1931–1960) in capital or large city
+
+- Area: land area in square miles
+
+### Source
+
+- U.S. Department of Commerce, Bureau of the Census (1977) Statistical Abstract of the United States.
+
+- U.S. Department of Commerce, Bureau of the Census (1977) County and City Data Book.
+
+## Overview
+
+The shiny app plots graph against *Income* for different variables from the `states.x77` dataset.
+```{r, comment=''}
+data <- data.frame(state.x77)
+head(data)
+```
+
+## Plots
+
+```{r r,echo=FALSE}
+data <- abs(data.frame(state.x77))
+data$Frost <- 1+data$Frost
+data <- log(data)
+
+par(mfrow=c(3,2))
+plot(data$Population,data$Income, xlab = 'Population', ylab = "Income",
+     main = "Income by Population", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Population, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$Illiteracy,data$Income, xlab = 'Illiteracy', ylab = "Income",
+     main = "Income by Illiteracy", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Illiteracy, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$Life.Exp,data$Income, xlab = 'Life.Exp', ylab = "Income",
+     main = "Income by Life.Exp", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Life.Exp, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$Murder,data$Income, xlab = 'Murder', ylab = "Income",
+     main = "Income by Murder", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Murder, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$HS.Grad,data$Income, xlab = 'HS.Grad', ylab = "Income",
+     main = "Income by HS.Grad", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ HS.Grad, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$Area,data$Income, xlab = 'Area', ylab = "Income",
+     main = "Income by Area", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Area, data=data),col = "blue2", lwd = 2.4)
+
+plot(data$Frost,data$Income, xlab = 'Frost', ylab = "Income",
+     main = "Income by Frost", pch = 16, bty = "n", col='#00BB00EE')
+abline(lm(Income ~ Frost, data=data),col = "blue2", lwd = 2.4)
+
+```
+
+
+
+
